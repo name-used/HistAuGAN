@@ -1,6 +1,7 @@
-
 import random
 import torch
+import numpy as np
+
 from torchvision import transforms
 
 from histaugan.model import MD_multi
@@ -32,9 +33,9 @@ basic_augmentations = transforms.Compose([
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
     RandomRotate90([0, 90, 180, 270]),
-    transforms.RandomApply((transforms.GaussianBlur(3), ), p=0.25),
+    transforms.RandomApply((transforms.GaussianBlur(3),), p=0.25),
     transforms.RandomApply((transforms.ColorJitter(
-        brightness=0.1, contrast=0.1), ), p=0.5),
+        brightness=0.1, contrast=0.1),), p=0.5),
     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
     transforms.RandomErasing(),
 ])
@@ -53,11 +54,11 @@ color_augmentations = transforms.Compose([
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
     RandomRotate90([0, 90, 180, 270]),
-    transforms.RandomApply((transforms.GaussianBlur(3), ), p=0.25),
+    transforms.RandomApply((transforms.GaussianBlur(3),), p=0.25),
     transforms.RandomApply((transforms.ColorJitter(
-        brightness=0.1, contrast=0.1), ), p=0.5),
+        brightness=0.1, contrast=0.1),), p=0.5),
     transforms.RandomApply(
-        (transforms.ColorJitter(saturation=0.5, hue=0.5), ), p=0.5),
+        (transforms.ColorJitter(saturation=0.5, hue=0.5),), p=0.5),
     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
     transforms.RandomErasing(),
 ])
@@ -67,11 +68,11 @@ color_augmentations_light = transforms.Compose([
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
     RandomRotate90([0, 90, 180, 270]),
-    transforms.RandomApply((transforms.GaussianBlur(3), ), p=0.25),
+    transforms.RandomApply((transforms.GaussianBlur(3),), p=0.25),
     transforms.RandomApply((transforms.ColorJitter(
-        brightness=0.1, contrast=0.1), ), p=0.5),
+        brightness=0.1, contrast=0.1),), p=0.5),
     transforms.RandomApply(
-        (transforms.ColorJitter(saturation=0.1, hue=0.1), ), p=0.5),
+        (transforms.ColorJitter(saturation=0.1, hue=0.1),), p=0.5),
     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
     transforms.RandomErasing(),
 ])
@@ -120,28 +121,28 @@ opts = Args()
 
 mean_domains = [
     torch.tensor([0.3020, -2.6476, -0.9849, -0.7820, -
-                 0.2746,  0.3361,  0.1694, -1.2148]),
-    torch.tensor([0.1453, -1.2400, -0.9484,  0.9697, -
-                 2.0775,  0.7676, -0.5224, -0.2945]),
-    torch.tensor([2.1067, -1.8572,  0.0055,  1.2214, -
-                 2.9363,  2.0249, -0.4593, -0.9771]),
-    torch.tensor([0.8378, -2.1174, -0.6531,  0.2986, -
-                 1.3629, -0.1237, -0.3486, -1.0716]),
-    torch.tensor([1.6073,  1.9633, -0.3130, -1.9242, -
-                 0.9673,  2.4990, -2.2023, -1.4109]),
+    0.2746, 0.3361, 0.1694, -1.2148]),
+    torch.tensor([0.1453, -1.2400, -0.9484, 0.9697, -
+    2.0775, 0.7676, -0.5224, -0.2945]),
+    torch.tensor([2.1067, -1.8572, 0.0055, 1.2214, -
+    2.9363, 2.0249, -0.4593, -0.9771]),
+    torch.tensor([0.8378, -2.1174, -0.6531, 0.2986, -
+    1.3629, -0.1237, -0.3486, -1.0716]),
+    torch.tensor([1.6073, 1.9633, -0.3130, -1.9242, -
+    0.9673, 2.4990, -2.2023, -1.4109]),
 ]
 
 std_domains = [
     torch.tensor([0.6550, 1.5427, 0.5444, 0.7254,
-                 0.6701, 1.0214, 0.6245, 0.6886]),
+                  0.6701, 1.0214, 0.6245, 0.6886]),
     torch.tensor([0.4143, 0.6543, 0.5891, 0.4592,
-                 0.8944, 0.7046, 0.4441, 0.3668]),
+                  0.8944, 0.7046, 0.4441, 0.3668]),
     torch.tensor([0.5576, 0.7634, 0.7875, 0.5220,
-                 0.7943, 0.8918, 0.6000, 0.5018]),
+                  0.7943, 0.8918, 0.6000, 0.5018]),
     torch.tensor([0.4157, 0.4104, 0.5158, 0.3498,
-                 0.2365, 0.3612, 0.3375, 0.4214]),
+                  0.2365, 0.3612, 0.3375, 0.4214]),
     torch.tensor([0.6154, 0.3440, 0.7032, 0.6220,
-                 0.4496, 0.6488, 0.4886, 0.2989]),
+                  0.4496, 0.6488, 0.4886, 0.2989]),
 ]
 
 
@@ -169,11 +170,10 @@ def generate_hist_augs(img, img_domain, model, z_content=None, same_attribute=Fa
         std = logvar.mul(0.5).exp_().to(device)
         eps = torch.randn((std.size(0), std.size(1))).to(device)
         z_attr = eps.mul(std).add_(mu)
-    elif same_attribute == False and stats is not None and new_domain in range(5):
-        z_attr = (torch.randn((1, 8, )) * \
-            stats[1][new_domain] + stats[0][new_domain]).to(device)
+    elif not same_attribute and stats is not None and new_domain in range(5):
+        z_attr = (torch.randn((1, 8,)) * stats[1][new_domain] + stats[0][new_domain]).to(device)
     else:
-        z_attr = torch.randn((1, 8, )).to(device)
+        z_attr = torch.randn((1, 8,)).to(device)
 
     # determine new domain vector
     if isinstance(new_domain, int) and new_domain in range(5):
